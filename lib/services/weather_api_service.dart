@@ -1,11 +1,12 @@
 import 'dart:convert';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart';
 import 'package:weather_app/models/weather.dart';
 
 class WeatherApiService {
   static const String _baseUrl = "api.openweathermap.org";
   final String _apiUrl = "/data/2.5/forecast";
-  final String _apiKey = "7ac32416381a8029fe4d75efa1a0ea4f";
+  static final String _apiKey = dotenv.env["OpenWeather_API_Key"]!;
   final String _defaultUnits = "metric";
 
   /// Builds the complete API request URL
@@ -31,11 +32,20 @@ class WeatherApiService {
       if (response.isSuccessful) {
         final Map<String, dynamic> decodedJson = jsonDecode(response.body);
         return WeatherForecastResponse.fromMap(decodedJson);
+      } else if (response.statusCode == 404) {
+        throw Exception("City Not Found");
+      } else if (response.statusCode == 401) {
+        throw Exception("Invalid API Key");
       } else {
         throw Exception("Failed to load weather data: ${response.statusCode}");
       }
     } catch (e) {
-      throw Exception("API call failed: $e");
+      if (e is Exception && e.toString().contains('Failed host lookup')) {
+        throw Exception(
+          'Network error: Please check your internet connection.',
+        );
+      }
+      rethrow;
     }
   }
 }

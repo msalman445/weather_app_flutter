@@ -31,12 +31,10 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
   }
 
   void onSearchBarButtonTap() {
-    setState(() {
-      isSearchIcon = true;
-      width = 50;
-      widget.onSearchButtonTapped();
-      widget.textEditingController.clear();
-    });
+    isSearchIcon = true;
+    width = 50;
+    widget.onSearchButtonTapped();
+    widget.textEditingController.clear();
   }
 
   @override

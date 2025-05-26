@@ -13,6 +13,7 @@ class WeatherForecastList extends StatelessWidget {
     if (dateTime != null) {
       return dateFormat.format(dateTime);
     }
+    return null;
   }
 
   @override
@@ -65,6 +66,17 @@ class WeatherForecastList extends StatelessWidget {
 
           WeatherForecast(
             day: dayFormat(weatherForecastResponse?.list[38].dt) ?? "Wed",
+            iconCode: weatherForecastResponse?.list[38].weather[0].icon,
+            temperature:
+                weatherForecastResponse?.list[38].main.temp
+                    .toInt()
+                    .toString() ??
+                "34",
+          ),
+          SizedBox(width: gap),
+
+          WeatherForecast(
+            day: dayFormat(weatherForecastResponse?.list[39].dt) ?? "Wed",
             iconCode: weatherForecastResponse?.list[38].weather[0].icon,
             temperature:
                 weatherForecastResponse?.list[38].main.temp

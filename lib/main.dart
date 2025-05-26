@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
 import 'package:weather_app/custom_colors.dart';
-import 'package:weather_app/models/weather_api_service.dart';
+import 'package:weather_app/providers/weather_provider.dart';
+import 'package:weather_app/services/weather_api_service.dart';
 import 'package:weather_app/models/weather.dart';
 import 'package:weather_app/widgets/custom_search_bar.dart';
 import 'package:weather_app/pages/weather_home_page.dart';
 
-void main() {
+Future<void> main() async {
+  await dotenv.load(fileName: ".env");
   runApp(const MyApp());
 }
 
@@ -19,7 +23,10 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: ChangeNotifierProvider(
+        create: (context) => WeatherProvider(),
+        child: const MyHomePage(title: "Weather App"),
+      ),
     );
   }
 }
@@ -54,13 +61,15 @@ class _MyHomePageState extends State<MyHomePage> {
     _textEditingController.dispose();
   }
 
-  void onSearchButtonTapped() {
-    setState(() {
-      city = _textEditingController.text;
-      if (city != null) {
-        weatherDataFuture = apiService.fetchWeatherData(city: city!);
-      }
-    });
+  void getCityWeather() {
+    final String city = _textEditingController.text.trim();
+    if (city.isNotEmpty) {
+      context.read<WeatherProvider>().getWeatherData(city);
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Please enter your city")));
+    }
   }
 
   @override
@@ -70,7 +79,7 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: clrLightOrangeTheme,
         title: CustomSearchBar(
           textEditingController: _textEditingController,
-          onSearchButtonTapped: onSearchButtonTapped,
+          onSearchButtonTapped: getCityWeather,
         ),
       ),
       body: WeatherHomePage(weatherFutureData: weatherDataFuture),
