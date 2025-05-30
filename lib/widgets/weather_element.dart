@@ -18,7 +18,7 @@ class WeatherElement extends StatelessWidget {
       height: 55,
       width: width,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 150),
+        color: Colors.white.withOpacity(0.5),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(

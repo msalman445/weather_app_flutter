@@ -18,7 +18,7 @@ class WeatherForecast extends StatelessWidget {
       width: 52,
       height: 93,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 150),
+        color: Colors.white.withOpacity(0.5),
         borderRadius: BorderRadius.circular(30),
       ),
       child: Padding(
@@ -30,12 +30,7 @@ class WeatherForecast extends StatelessWidget {
               day,
               style: TextStyle(color: const Color.fromARGB(255, 136, 136, 136)),
             ),
-            WeatherIcon(
-              iconCode: iconCode,
-              width: 35,
-              height: 35,
-              defaultIconPath: "assets/images/sun_24.png",
-            ),
+            WeatherIcon(iconCode: iconCode, width: 35, height: 35),
             Text(
               "$temperature°",
               style: TextStyle(color: const Color.fromARGB(255, 136, 136, 136)),

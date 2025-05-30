@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:weather_app/custom_colors.dart';
-import 'package:weather_app/providers/weather_provider.dart';
-import 'package:weather_app/services/weather_api_service.dart';
-import 'package:weather_app/models/weather.dart';
+import 'package:weather_app/providers/weather_api_provider.dart';
+import 'package:weather_app/providers/weather_db_provider.dart';
 import 'package:weather_app/widgets/custom_search_bar.dart';
 import 'package:weather_app/pages/weather_home_page.dart';
 
@@ -23,9 +22,12 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
       ),
-      home: ChangeNotifierProvider(
-        create: (context) => WeatherProvider(),
-        child: const MyHomePage(title: "Weather App"),
+      home: MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (context) => WeatherApiProvider()),
+          ChangeNotifierProvider(create: (context) => WeatherDbProvider()),
+        ],
+        child: MyHomePage(title: "Weather App"),
       ),
     );
   }
@@ -41,10 +43,6 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  WeatherApiService apiService = WeatherApiService();
-
-  Future<WeatherForecastResponse>? weatherDataFuture;
-
   late TextEditingController _textEditingController;
 
   String? city;
@@ -52,6 +50,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
+
     _textEditingController = TextEditingController();
   }
 
@@ -64,7 +63,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void getCityWeather() {
     final String city = _textEditingController.text.trim();
     if (city.isNotEmpty) {
-      context.read<WeatherProvider>().getWeatherData(city);
+      context.read<WeatherApiProvider>().getWeatherData(city);
     } else {
       ScaffoldMessenger.of(
         context,
@@ -82,7 +81,7 @@ class _MyHomePageState extends State<MyHomePage> {
           onSearchButtonTapped: getCityWeather,
         ),
       ),
-      body: WeatherHomePage(weatherFutureData: weatherDataFuture),
+      body: WeatherHomePage(),
     );
   }
 }

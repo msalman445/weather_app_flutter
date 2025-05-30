@@ -1,28 +1,46 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:weather_app/custom_colors.dart';
-import 'package:weather_app/models/weather.dart';
-import 'package:weather_app/providers/weather_provider.dart';
-import 'package:weather_app/widgets/current_date.dart';
-import 'package:weather_app/widgets/current_location.dart';
-import 'package:weather_app/widgets/temperature_row.dart';
-import 'package:weather_app/widgets/weather_elements_list.dart';
-import 'package:weather_app/widgets/weather_forecast_list.dart';
+import 'package:weather_app/pages/weather_data_column.dart';
+import 'package:weather_app/providers/weather_api_provider.dart';
+import 'package:weather_app/providers/weather_db_provider.dart';
 
-class WeatherHomePage extends StatelessWidget {
-  const WeatherHomePage({super.key, required this.weatherFutureData});
-  final Future<WeatherForecastResponse>? weatherFutureData;
+class WeatherHomePage extends StatefulWidget {
+  const WeatherHomePage({super.key});
 
-  String _dateFormatter(WeatherForecastResponse weatherForecastResponse) {
-    final DateFormat dateFormat = DateFormat("E, MMM d");
-    return dateFormat.format(weatherForecastResponse.list[0].dt);
+  @override
+  State<WeatherHomePage> createState() => _WeatherHomePageState();
+}
+
+class _WeatherHomePageState extends State<WeatherHomePage> {
+  late WeatherDbProvider _weatherDbProvider;
+  late WeatherApiProvider _weatherApiProvider;
+
+  bool isRefresh = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      context.read<WeatherDbProvider>().getWeatherDataFromDb();
+    });
+  }
+
+  Future<void> _onRefresh() async {
+    isRefresh = true;
+    await _weatherDbProvider.getWeatherDataFromDb();
+    return _weatherApiProvider.getWeatherData(
+      _weatherDbProvider.weatherForecastResponse!.city.name,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final Size(:width, :height) = MediaQuery.sizeOf(context);
-    final WeatherProvider weatherProvider = context.watch<WeatherProvider>();
+
+    // Providers
+    _weatherDbProvider = context.watch<WeatherDbProvider>();
+    _weatherApiProvider = context.watch<WeatherApiProvider>();
 
     return Container(
       width: double.infinity,
@@ -34,92 +52,62 @@ class WeatherHomePage extends StatelessWidget {
           colors: [clrLightOrangeTheme, clrDarkOrangeTheme],
         ),
       ),
-      child: SingleChildScrollView(
-        child: Center(
-          child: SafeArea(
-            bottom: false,
-            minimum: EdgeInsets.all(13),
-            child: Builder(
-              builder: (context) {
-                switch (weatherProvider.weatherState) {
-                  case WeatherState.initial:
-                    return Text("Please Enter Your City");
-                  case WeatherState.loading:
-                    return CircularProgressIndicator();
-                  case WeatherState.error:
-                    return Column(
-                      children: [
-                        Text(weatherProvider.errorMessage),
-                        ElevatedButton(
-                          onPressed: () {
-                            weatherProvider.resetState();
-                          },
-                          child: Text("Retry"),
-                        ),
-                      ],
-                    );
-                  case WeatherState.loaded:
-                    final weatherData = weatherProvider.weatherForecastResponse;
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        CurrentLocation(
-                          location: weatherData?.city.name ?? "Lahore",
-                        ),
-                        SizedBox(height: 5),
-                        CurrentDate(date: _dateFormatter(weatherData!)),
-
-                        SizedBox(height: height * 0.03),
-                        TemperatureRow(
-                          temperature:
-                              (weatherData.list[0].main.temp
-                                  .toInt()
-                                  .toString()),
-                          iconCode: weatherData.list[0].weather[0].icon,
-                          weatherCondition: weatherData.list[0].weather[0].main,
-                        ),
-                        SizedBox(height: height * 0.03),
-                        WeatherElementsList(
-                          feelsLikeTemp:
-                              (weatherData.list[0].main.feelsLike
-                                  .toInt()
-                                  .toString()),
-                          humidity:
-                              (weatherData.list[0].main.humidity.toString()),
-                          wind: (weatherData.list[0].wind.deg.toString()),
-                        ),
-                        SizedBox(height: height * 0.03),
-                        WeatherForecastList(
-                          weatherForecastResponse: weatherData,
-                        ),
-                      ],
-                    );
+      child: SafeArea(
+        bottom: false,
+        minimum: EdgeInsets.all(13),
+        child: Builder(
+          builder: (context) {
+            switch (_weatherApiProvider.weatherState) {
+              case WeatherState.initial:
+                if (_weatherDbProvider.weatherForecastResponse == null) {
+                  return Center(
+                    widthFactor: width,
+                    heightFactor: height,
+                    child: Text("Please Enter Your Location..."),
+                  );
+                } else {
+                  return WeatherDataColumn(
+                    weatherForecastResponse:
+                        _weatherDbProvider.weatherForecastResponse!,
+                    onRefresh: _onRefresh,
+                  );
                 }
-              },
-            ),
+              case WeatherState.loading:
+                if (isRefresh) {
+                  isRefresh = false;
+                  return WeatherDataColumn(
+                    weatherForecastResponse:
+                        _weatherDbProvider.weatherForecastResponse!,
+                    onRefresh: _onRefresh,
+                  );
+                }
+                return SizedBox(
+                  width: width,
+                  height: height - kToolbarHeight - 26,
+                  child: Center(child: CircularProgressIndicator()),
+                );
 
-            // FutureBuilder(
-            //   future: weatherFutureData,
-            //   builder: (context, snapshot) {
-            //     if (snapshot.connectionState == ConnectionState.none) {
-            //       return TemplateHomePage();
-            //     } else if (snapshot.connectionState == ConnectionState.active ||
-            //         snapshot.connectionState == ConnectionState.waiting) {
-            //       return CircularProgressIndicator();
-            //     } else if (snapshot.hasData) {
-            //       WeatherForecastResponse weatherForecastResponse =
-            //           snapshot.data!;
-            //       return TemplateHomePage(
-            //         weatherForecastResponse: weatherForecastResponse,
-            //       );
-            //     } else {
-            //       return TemplateHomePage();
-            //     }
-            //   },
-            // ),
-          ),
+              case WeatherState.error:
+                return Column(
+                  children: [
+                    Text(_weatherApiProvider.errorMessage),
+                    ElevatedButton(
+                      onPressed: () {
+                        _weatherApiProvider.resetState();
+                      },
+                      child: Text("Retry"),
+                    ),
+                  ],
+                );
+              case WeatherState.loaded:
+                final weatherData = _weatherApiProvider.weatherForecastResponse;
+
+                return WeatherDataColumn(
+                  weatherForecastResponse: weatherData!,
+                  onRefresh: _onRefresh,
+                );
+            }
+          },
         ),
       ),
     );

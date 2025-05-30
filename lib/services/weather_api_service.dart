@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart';
 import 'package:weather_app/models/weather.dart';
+import 'package:weather_app/services/weather_db_service.dart';
 
 class WeatherApiService {
   static const String _baseUrl = "api.openweathermap.org";
@@ -26,10 +27,18 @@ class WeatherApiService {
   }) async {
     final selectedUnits = units ?? _defaultUnits;
     final uri = _buildUri(city: city, units: selectedUnits);
+    WeatherDbService weatherDbService = WeatherDbService();
     try {
       final response = await get(uri);
-
+      // TODO: Improve this
       if (response.isSuccessful) {
+        // Storing fetched data in database
+        if ((await weatherDbService.fetchDataFromDb())?.isNotEmpty ?? false) {
+          weatherDbService.deleteDataFromDb();
+          weatherDbService.insertDataInDb(response.body);
+        } else {
+          weatherDbService.insertDataInDb(response.body);
+        }
         final Map<String, dynamic> decodedJson = jsonDecode(response.body);
         return WeatherForecastResponse.fromMap(decodedJson);
       } else if (response.statusCode == 404) {
